@@ -20,6 +20,9 @@ call unite#util#set_default('g:unite_source_history_unite_limit', 100)
 "}}}
 
 function! unite#sources#history_unite#add(unite) abort"{{{
+  if !g:unite_source_history_source_enable
+    return
+  endif
   let s:unite_histories = filter(s:unite_histories,
         \ 'v:val.sources !=# a:unite.sources
         \  && v:val.context.input !=# a:unite.context.input')
