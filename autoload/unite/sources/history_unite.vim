@@ -13,12 +13,11 @@ let s:unite_histories = []
 " the last modified time of the unite histories file.
 let s:unite_histories_file_mtime = 0
 
-let g:unite_source_history_source_enable = 1
-
 call unite#util#set_default('g:unite_source_history_unite_file',
       \ unite#get_data_directory() . '/history_unite')
 
 call unite#util#set_default('g:unite_source_history_unite_limit', 100)
+call unite#util#set_default('g:unite_source_history_source_enable', 1)
 "}}}
 
 function! unite#sources#history_unite#add(unite) abort"{{{
