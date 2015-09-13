@@ -458,23 +458,20 @@ function! unite#init#_candidates_source(candidates, source_name) abort "{{{
     return []
   endif
 
-  let default_candidate = {
-        \ 'kind' : source.default_kind,
-        \ 'is_dummy' : 0,
-        \ 'is_matched' : 1,
-        \ 'is_multiline' : 0,
-        \ 'unite__is_marked' : 0,
-        \ }
+  lua << EOF
+  local default_kind = vim.eval('source.default_kind')
+  local source_name = vim.eval('a:source_name')
+  for c in vim.eval('a:candidates')() do
+    c.kind = c.kind or default_kind
+    if not c.is_dummy then c.is_dummy = '' end
+    if not c.is_matched then c.is_matched = '1' end
+    if not c.is_multiline then c.is_multiline = '' end
+    if not c.unite__is_marked then c.unite__is_marked = '' end
+    c.source = source_name
+  end
+EOF
 
-  let candidates = []
-  for candidate in a:candidates
-    let candidate = extend(candidate, default_candidate, 'keep')
-    let candidate.source = a:source_name
-
-    call add(candidates, candidate)
-  endfor
-
-  return candidates
+  return a:candidates
 endfunction"}}}
 
 function! unite#init#_default_scripts(kind, names) abort "{{{

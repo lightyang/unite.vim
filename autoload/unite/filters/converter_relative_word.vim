@@ -62,7 +62,6 @@ function! unite#filters#converter_relative_word#lua(candidates, cwd) abort "{{{
   endif
 
   lua << EOF
-  do
   local candidates = vim.eval('a:candidates')
   local cwd = vim.eval('cwd')
   local home = vim.eval('unite#util#substitute_path_separator(expand("~/"))')
@@ -74,7 +73,6 @@ function! unite#filters#converter_relative_word#lua(candidates, cwd) abort "{{{
       candidate.word = path:sub(home:len() + 1)
     end
   end
-end
 EOF
 
   return a:candidates

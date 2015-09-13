@@ -61,50 +61,112 @@ function! s:sorter.filter(candidates, context) abort
 endfunction
 
 function! unite#filters#sorter_selecta#_sort(candidates, input) abort
-  " Initialize.
-  let is_path = has_key(a:candidates[0], 'action__path')
-  for candidate in a:candidates
-    let candidate.filter__rank = 0
-    let candidate.filter__word = is_path ?
-          \ fnamemodify(candidate.word, ':t') : candidate.word
-  endfor
+  let candidates = []
+  python << PYTHONEOF
+import vim
+import re
+candidates = vim.bindeval('a:candidates')
+words = [c.get('word') for c in candidates]
+ainput = vim.bindeval('a:input')
 
+def unescape_input(i):
+  return re.sub(r'\\*', '', re.sub(r'\\ ', ' ', i)).strip().lower()
+inputs = map(unescape_input, re.split(r'(?!\\) ', ainput))
+inputs = [(i, i[1:]) for i in inputs if i]
 
-  let inputs = map(split(a:input, '\\\@<! '), "
-        \ tolower(substitute(substitute(v:val, '\\\\ ', ' ', 'g'),
-        \ '\\*', '', 'g'))")
-
-  let candidates = s:sort_python(a:candidates, inputs)
+ranks = []
+for i, word in enumerate(words):
+  rank = 0
+  failed = False
+  for (pattern, tail) in inputs:
+    score = get_score(word, pattern, tail)
+    if score is None:
+      failed = True
+      break
+    rank += score
+  if failed:
+    continue
+  ranks.append((rank, i))
+order = map(lambda a: a[1], sorted(ranks))
+for o in order:
+  vim.command('call add(candidates, a:candidates[%d])' % o)
+PYTHONEOF
 
   return candidates
 endfunction
 
-" @vimlint(EVL102, 1, l:input)
-" @vimlint(EVL102, 1, l:candidate)
-function! s:sort_python(candidates, inputs) abort
-  for input in a:inputs
-    if input != ''
-      for candidate in a:candidates
-        Python2or3 score()
-      endfor
-    endif
-  endfor
-
-  return unite#util#sort_by(a:candidates, 'v:val.filter__rank')
-endfunction"}}}
-" @vimlint(EVL102, 0, l:input)
-" @vimlint(EVL102, 0, l:candidate)
-
 " @vimlint(EVL102, 1, l:root)
 function! s:def_python() abort
-  if !(has('python') || has('python3'))
-    return
-  endif
-  let root = s:root
-  Python2or3 import sys
-  Python2or3 import vim
-  Python2or3 sys.path.insert(0, vim.eval('root'))
-  Python2or3 from sorter_selecta import score
+python << PYTHONEOF
+import string
+
+BOUNDARY_CHARS = set(string.punctuation + string.whitespace)
+NORMAL = 0
+SEQUENTIAL = 1
+BOUNDARY = 2
+
+def get_score(str, query_chars, tail):
+  # Highest possible score is the string length
+  best_score = len(str)
+  best_range = None
+  rlimit = str.rfind(query_chars[-1])
+  if rlimit == -1:
+    return None
+  rlimit += 1
+
+  # For each occurence of the first character of the query in the string
+  first_index = -1
+  while True:
+    first_index = str.find(query_chars[0], first_index + 1)
+    if first_index == -1:
+      break
+    # Get the score for the rest
+    score, last_index = find_end_of_match(str, tail, first_index, best_score)
+
+    # won't be able to find more matches
+    if score is None:
+      break
+
+    if score < best_score:
+      best_score = score
+      best_range = (first_index, last_index)
+
+  if best_range is None:
+    return None
+  return best_score
+
+def find_end_of_match(to_match, chars, first_index, best_score):
+  if first_index == 0 or to_match[first_index - 1] in BOUNDARY_CHARS:
+    score = 0
+  else:
+    score = 1
+  last_index = first_index
+  last_type = NORMAL
+
+  for char in chars:
+    index = to_match.find(char, last_index + 1)
+    if index == -1:
+      return (None, None)
+
+    # Do not count sequential characters more than once
+    if index == last_index + 1:
+      if last_type != SEQUENTIAL:
+        last_type = SEQUENTIAL
+        score += 1
+    # Same for first characters of words
+    elif to_match[index - 1] in BOUNDARY_CHARS:
+      if last_type != BOUNDARY:
+        last_type = BOUNDARY
+        score += 1
+    else:
+      last_type = NORMAL
+      score += index - last_index
+    if score >= best_score:
+      return (None, None)
+    last_index = index
+
+  return (score, last_index)
+PYTHONEOF
 endfunction
 " @vimlint(EVL102, 0, l:root)
 

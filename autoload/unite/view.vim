@@ -596,11 +596,14 @@ function! unite#view#_quit(is_force, ...) abort  "{{{
   let context = unite.context
 
   " Clear mark.
-  for source in unite#loaded_sources_list()
-    for candidate in source.unite__cached_candidates
-      let candidate.unite__is_marked = 0
-    endfor
-  endfor
+  lua << EOF
+  local sources = vim.eval('unite#loaded_sources_list()')
+  for source in sources() do
+    for candidate in source.unite__cached_candidates() do
+      candidate.unite__is_marked = 0
+    end
+  end
+EOF
 
   if unite.context.unite__is_manual
     call unite#sources#history_unite#add(unite)

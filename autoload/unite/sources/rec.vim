@@ -33,6 +33,8 @@ call unite#util#set_default(
       \ ['-path', '*/.git/*', '-prune', '-o', '-type', 'l', '-print'])
 call unite#util#set_default(
       \ 'g:unite_source_rec_git_command', 'git')
+call unite#util#set_default(
+      \ 'g:unite_source_rec_check_source_type', 0)
 "}}}
 
 let s:Cache = unite#util#get_vital_cache()
@@ -790,8 +792,8 @@ function! s:init_continuation(context, directory) abort "{{{
   if s:Cache.filereadable(cache_dir, a:directory)
     " Use cache file.
 
-    let files = unite#helper#paths2candidates(
-          \ s:Cache.readfile(cache_dir, a:directory))
+    let cache_files = s:Cache.readfile(cache_dir, a:directory)
+    let files = unite#helper#paths2candidates(cache_files)
 
     let continuation[a:directory] = {
           \ 'files' : files,
@@ -808,11 +810,22 @@ function! s:init_continuation(context, directory) abort "{{{
   endif
 
   let a:context.source__continuation = continuation[a:directory]
-  let a:context.source__continuation.files =
-        \ filter(copy(a:context.source__continuation.files),
-        \ (a:context.source__is_directory) ?
-        \   'isdirectory(v:val.action__path)' :
-        \   'filereadable(v:val.action__path)')
+  if g:unite_source_rec_check_source_type
+    let files = []
+      lua << EOF
+      do
+        local old_files = vim.eval('a:context.source__continuation.files')
+        local files = vim.eval('files')
+        local test = vim.eval('a:context.source__is_directory') and 'isdirectory' or 'filereadable'
+        for f in old_files() do
+          if vim.eval(test .. '("' .. f.action__path .. '")') then
+            files:add(f)
+          end
+        end
+      end
+EOF
+    let a:context.source__continuation.files = files
+  end
 endfunction"}}}
 function! s:write_cache(context, directory, files) abort "{{{
   let cache_dir = printf('%s/%s/%s',
