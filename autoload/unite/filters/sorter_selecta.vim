@@ -105,11 +105,12 @@ NORMAL = 0
 SEQUENTIAL = 1
 BOUNDARY = 2
 
-def get_score(str, query_chars, tail):
+def get_score(s, query_chars, tail):
   # Highest possible score is the string length
-  best_score = len(str)
+  s = s.lower()
+  best_score = len(s)
   best_range = None
-  rlimit = str.rfind(query_chars[-1])
+  rlimit = s.rfind(query_chars[-1])
   if rlimit == -1:
     return None
   rlimit += 1
@@ -117,11 +118,11 @@ def get_score(str, query_chars, tail):
   # For each occurence of the first character of the query in the string
   first_index = -1
   while True:
-    first_index = str.find(query_chars[0], first_index + 1)
+    first_index = s.find(query_chars[0], first_index + 1)
     if first_index == -1:
       break
     # Get the score for the rest
-    score, last_index = find_end_of_match(str, tail, first_index, best_score)
+    score, last_index = find_end_of_match(s, tail, first_index, best_score)
 
     # won't be able to find more matches
     if score is None:
