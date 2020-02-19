@@ -30,7 +30,7 @@ let s:save_cpo = &cpo
 set cpo&vim
 
 function! unite#filters#sorter_selecta#define() abort
-  if has('python') || has('python3')
+  if has('python3')
     return s:sorter
   else
     return {}
@@ -62,12 +62,12 @@ endfunction
 
 function! unite#filters#sorter_selecta#_sort(candidates, input) abort
   let candidates = []
-  python << PYTHONEOF
+  python3 << PYTHONEOF
 import vim
 import re
 candidates = vim.bindeval('a:candidates')
-words = [c.get('word') for c in candidates]
-ainput = vim.bindeval('a:input')
+words = [c.get('word').decode('utf-8') for c in candidates]
+ainput = vim.bindeval('a:input').decode('utf-8')
 
 def unescape_input(i):
   return re.sub(r'\\*', '', re.sub(r'\\ ', ' ', i)).strip().lower()
@@ -96,8 +96,8 @@ PYTHONEOF
 endfunction
 
 " @vimlint(EVL102, 1, l:root)
-function! s:def_python() abort
-python << PYTHONEOF
+function! s:def_python()
+python3 << PYTHONEOF
 import string
 
 BOUNDARY_CHARS = set(string.punctuation + string.whitespace)
